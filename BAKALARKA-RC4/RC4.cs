@@ -8,67 +8,6 @@ using System.Threading.Tasks;
 
 namespace BAKALARKA_RC4
 {
-    internal class Key
-    {
-        private int[] keyArray;
-        private int keyLength;
-
-        public int Length
-        {
-            get
-            {
-                return keyLength;
-            }
-
-        }
-
-        public int this[int i]
-        {
-            get { return keyArray[i%keyLength]; }
-        }
-
-
-        public Key(string key)
-        {
-            this.keyLength = key.Length;
-            this.keyArray = new int[keyLength];
-            for (int k = 0; k < keyLength; k++)
-            {
-                keyArray[k] = Utils.ord(key[k]);
-            }
-        }
-
-        public Key(long key)
-        {
-            keyLength = Utils.getByteLenghth(key);
-            long mask = 0xFF;
-            long tmp;
-            int shift;
-
-            for (int k = 0; k < keyLength; k++)
-            {
-                shift = 8*(k);
-                tmp = key & (mask << shift);
-                keyArray[k] = (int) (tmp >> shift);
-
-            }
-        }
-
-        public Key(int[] key)
-        {
-            keyLength = key.Length;
-            keyArray = new int[keyLength];
-            for (int k = 0; k < keyLength; k++)
-            {
-
-                keyArray[k] = key[k];
-
-            }
-
-        }
-    }
-
-
     class RC4
     {
         protected int N;
@@ -76,16 +15,17 @@ namespace BAKALARKA_RC4
         protected int i;
         protected int j;
         protected int[] S;
-        //protected int[] K;
         protected Key K;
 
         protected int rounds;
 
         protected int[] InvS;
+        protected int[] savedS;
 
-        public bool logEncryption       = false;
-        public bool logAfterKSAPerm     = false;
-        public bool logPRGA             = false;
+        public static bool logEncryption       = false;
+        public static bool logAfterKSAPerm     = false;
+        public static bool logPRGA             = false;
+        public static bool logKeyVerification  = false;
 
         public RC4(Key key)
         {
@@ -97,8 +37,8 @@ namespace BAKALARKA_RC4
         {
             N = Constants.N;
             S = new int[N];
+            savedS = new int[N];
             InvS = new int[N];
-            //K    = new int[N];
             K = key;
         }
 
@@ -108,7 +48,22 @@ namespace BAKALARKA_RC4
             KSA();
         }
 
-        public void KSA()
+        private void KSA()
+        {
+            PrepareInnerState();
+            
+            for (int k = 0; k < N; k++)
+            {
+                savedS[k] = S[k];
+            }
+
+            if (logAfterKSAPerm)
+            {
+                Log.writeOutState(S, i, j);
+            }
+        }
+
+        private void PrepareInnerState()
         {
             rounds = 0;
 
@@ -120,14 +75,8 @@ namespace BAKALARKA_RC4
             for (j = i = 0; i < N; i++)
             {
                 j = (j + S[i] + K[i]) % N;
-                swap(i, j);
+                Swap(i, j);
             }
-
-            if (logAfterKSAPerm)
-            {
-                writeOutState(S, i, j);
-            }
-           
 
             i = j = 0;
         }
@@ -138,7 +87,7 @@ namespace BAKALARKA_RC4
 
             i = (i + 1) % N;
             j = (j + S[i]) % N;
-            swap(i,j);
+            Swap(i,j);
             int t = (S[i] + S[j]) % N;
 
             if (logPRGA)
@@ -151,7 +100,7 @@ namespace BAKALARKA_RC4
 
         }
 
-        public string encrypt(string plaintext)
+        public string Encrypt(string plaintext)
         {
             int data_length = plaintext.Length;
             byte[] ciphertext = new byte[data_length];
@@ -170,32 +119,56 @@ namespace BAKALARKA_RC4
             return Encoding.GetEncoding(1252).GetString(ciphertext);
         }
 
-        public string decrypt(string ciphertext)
+        public string Decrypt(string ciphertext)
         {
             KSA();
-            return encrypt(ciphertext);
+            return Encrypt(ciphertext);
             
         }
 
-        public void getStateAfterKSA()
+        public bool VerifyKey(Key key)
+        {
+            PrepareInnerState();
+            bool samePermutation = true;
+            for (int k = 0; k < N; k++)
+            {
+                if (S[k] != savedS[k])
+                {
+                    samePermutation = false;
+                    break;
+                }
+            }
+
+            Console.WriteLine("{0}, {1} key", samePermutation, key.ToString());
+            if (!samePermutation)
+            {
+                Log.writeOutState(S,i,j);
+                Log.writeOutState(savedS,i,j);
+            }
+
+            return samePermutation;
+        }
+
+ 
+        public void GetStateAfterKSA()
         {
             for (int k = 0; k < rounds; k++)
             {
-                getPreviousState();
+                GetPreviousState();
             }
 
-            writeOutState(S, i, j);
+            Log.writeOutState(S, i, j);
         }
 
-        public void getPreviousState()
+        public void GetPreviousState()
         {
-            swap(i,j);
+            Swap(i,j);
             j = (N + j - S[i])%N;
             i = (i - 1)% N;
         }
 
 
-        protected void constructInvS()
+        protected void ConstructInvS()
         {
             for (int k = 0; k < N; k++)
             {
@@ -212,7 +185,7 @@ namespace BAKALARKA_RC4
             int[,] karr = new int[l,N];
 
             jarr1[0] = jarr2[0] = 0;
-            constructInvS();
+            ConstructInvS();
 
             for (int y = 0; y < N; y++)
             {
@@ -230,13 +203,13 @@ namespace BAKALARKA_RC4
             {
                 karr[y%l, mod(jarr1[y + 1] - jarr1[y] - y,N)]++;
                 karr[y%l, mod(jarr1[y + 1] - jarr2[y] - y,N)]++;
-                karr[y % l, mod(jarr2[y + 1] - jarr1[y] - y, N)]++;
-                karr[y % l, mod(jarr2[y + 1] - jarr2[y] - y, N)]++;
+                karr[y%l, mod(jarr2[y + 1] - jarr1[y] - y, N)]++;
+                karr[y%l, mod(jarr2[y + 1] - jarr2[y] - y, N)]++;
             }
 
             Log.Key(K);
             //Log.FrequencyOfKeyByte(karr,0,1);
-            Log.FrequencyTable(karr,3);
+            Log.FrequencyTable(karr,1);
         }
 
 
@@ -272,24 +245,13 @@ namespace BAKALARKA_RC4
             return (x % m + m) % m;
         }
 
-        protected void swap(int i, int j)
+        private void Swap(int i, int j)
         {
 
             int tmp = S[i];
             S[i] = S[j];
             S[j] = tmp;
         }
-
-        public void writeOutState(int[] S, int i, int j)
-        {
-            Console.WriteLine("RC4 permutation, i = {0}, j = {1}", i, j);
-            for (int k = 0; k < Constants.N; k++)
-            {
-                Console.Write("{0:X2} ", S[k]);
-                if ((k % 16) == 15) Console.Write("\n");
-            }
-        }
-
 
     }
 }
