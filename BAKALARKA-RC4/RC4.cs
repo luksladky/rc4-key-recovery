@@ -8,26 +8,25 @@ using System.Threading.Tasks;
 
 namespace BAKALARKA_RC4
 {
-    class RC4
+    class RC4 : BaseClass
     {
-        protected int N;
+
 
         protected int i;
         protected int j;
-        protected int[] S;
-        protected Key K;
+
+        public Key K;
 
         protected int rounds;
 
-        protected int[] InvS;
-        protected int[] savedS;
+        public int[] savedS;
 
         public static bool logEncryption       = false;
         public static bool logAfterKSAPerm     = false;
         public static bool logPRGA             = false;
         public static bool logKeyVerification  = false;
 
-        public RC4(Key key)
+        public RC4(Key key) : base()
         {
             init(key);
             KSA();
@@ -35,10 +34,8 @@ namespace BAKALARKA_RC4
 
         protected void init(Key key)
         {
-            N = Constants.N;
-            S = new int[N];
+            
             savedS = new int[N];
-            InvS = new int[N];
             K = key;
         }
 
@@ -160,98 +157,11 @@ namespace BAKALARKA_RC4
             Log.writeOutState(S, i, j);
         }
 
-        public void GetPreviousState()
+        private void GetPreviousState()
         {
             Swap(i,j);
             j = (N + j - S[i])%N;
             i = (i - 1)% N;
         }
-
-
-        protected void ConstructInvS()
-        {
-            for (int k = 0; k < N; k++)
-            {
-                InvS[S[k]] = k;
-            }
-        }
-
-
-        public void BuildKeyTable()
-        {
-            int l = K.Length;
-            int[] jarr1 = new int[N + 1];
-            int[] jarr2 = new int[N + 1];
-            int[,] karr = new int[l,N];
-
-            jarr1[0] = jarr2[0] = 0;
-            ConstructInvS();
-
-            for (int y = 0; y < N; y++)
-            {
-                jarr1[y + 1] = S[y];
-                jarr2[y + 1] = InvS[y];
-            }
-            for (int w = 0; w < l; w++)
-            {
-                for (int y = 0; y < N; y++)
-                {
-                    karr[w, y] = 0;
-                }
-            }
-            for (int y = 0; y < N; y++)
-            {
-                karr[y%l, mod(jarr1[y + 1] - jarr1[y] - y,N)]++;
-                karr[y%l, mod(jarr1[y + 1] - jarr2[y] - y,N)]++;
-                karr[y%l, mod(jarr2[y + 1] - jarr1[y] - y, N)]++;
-                karr[y%l, mod(jarr2[y + 1] - jarr2[y] - y, N)]++;
-            }
-
-            Log.Key(K);
-            //Log.FrequencyOfKeyByte(karr,0,1);
-            Log.FrequencyTable(karr,1);
-        }
-
-
-        public void LinearEquationsTest()
-        {
-            for (int y = 0; y < 100; y++)
-            {
-                int sumOfKeyBytes = 0;
-                for (int k = 0; k <= y; k++)
-                {
-                    sumOfKeyBytes += K[k];
-                    
-                }
-                int fy = mod((y*(y + 1)/2) + sumOfKeyBytes,N);
-
-                Console.Write("{0}: fy = {1,3}, Sy = {2,3}",y,fy,S[y]);
-                if (fy == S[y])
-                {
-                    Console.Write(" <<<<<");
-                }
-                Console.WriteLine();
-            }
-
-
-        }
-
-
-
-
-
-        int mod(int x, int m)
-        {
-            return (x % m + m) % m;
-        }
-
-        private void Swap(int i, int j)
-        {
-
-            int tmp = S[i];
-            S[i] = S[j];
-            S[j] = tmp;
-        }
-
     }
 }

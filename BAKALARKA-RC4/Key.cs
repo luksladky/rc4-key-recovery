@@ -81,10 +81,26 @@ namespace BAKALARKA_RC4
             string s = "";
             for (int i = 0; i < keyLength; i++)
             {
-                s = s + keyArray[i].ToString() + ",";
+                s = s + keyArray[i].ToString("X2") + ",";
             }
 
             return s;
+        }
+
+        public bool Equals(Key key)
+        {
+            bool equals = true;
+            if (key == null)
+                return false;
+            if (key.Length != this.Length)
+                return false;
+            for (int i = 0; i < this.Length; i++)
+            {
+                if (key[i] != this[i])
+                    equals = false;
+            }
+
+            return equals;
         }
     }
 }

@@ -20,7 +20,38 @@ namespace BAKALARKA_RC4
             return Encoding.GetEncoding(1252).GetString(bytes)[0];
         }
 
+        public static List<int[]> getCombinations(int k, int n)
+        {
+            List<int[]> combinations = new List<int[]>();
+            findCombinations(0, 0, new int[k], k, n, combinations);
 
+            return combinations;
+        } 
+
+        private static void findCombinations(int index, int inSet, int[] prevSet, int k, int n, List<int[]> combinations)
+        {
+            if (index == n)
+            {
+                return;
+            }
+
+            if (inSet == k)
+            {
+                combinations.Add(prevSet);
+
+            }
+            else
+            {
+                int[] arr1 = (int[])prevSet.Clone();
+                int[] arr2 = (int[])prevSet.Clone();
+
+                arr1[inSet] = index;
+
+                findCombinations(index + 1, inSet + 1, arr1, k, n, combinations);
+                findCombinations(index + 1, inSet, arr2, k, n, combinations);
+            }
+
+        }
 
 
 

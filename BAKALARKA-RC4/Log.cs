@@ -16,15 +16,17 @@ namespace BAKALARKA_RC4
             {
                 Console.Write("{0:X2}", a[k]);
             }
+            Console.WriteLine();
         }
 
         public static void Key(Key key)
         {
-            Console.Write("\n Actual key: ");
+            Console.Write("\n Key: ");
             for (int i = 0; i < key.Length; i++)
             {
                 Console.Write("{0:X} ", key[i]);
             }
+            Console.WriteLine();
         }
 
         public static void FrequencyOfKeyByte(int[,] frequencyTable, int keyByte, int treshold)
@@ -37,6 +39,7 @@ namespace BAKALARKA_RC4
                     Console.WriteLine("Val: {0:X2}, Freq: {1} ", j, frequencyTable[keyByte, j]);
                 }
             }
+            Console.WriteLine();
 
         }
 
@@ -55,6 +58,20 @@ namespace BAKALARKA_RC4
 
                 }
             }
+            Console.WriteLine();
+        }
+
+        public static void FrequencyListSortedWithTreshold(List<KeyByteFrequency>[] freqencyList) 
+        {
+            for (int i = 0; i < freqencyList.Length; i++)
+            {
+                Console.WriteLine("{0}th key byte", i);
+                foreach (KeyByteFrequency keyByteFrequency in freqencyList[i])
+                {
+                    Console.WriteLine("byte {0:X} - {1}x", keyByteFrequency.keyByte, keyByteFrequency.frequency);
+                }
+            }
+            Console.WriteLine();
         }
 
         public static void writeOutState(int[] S, int i, int j)
@@ -65,6 +82,29 @@ namespace BAKALARKA_RC4
                 Console.Write("{0:X2} ", S[k]);
                 if ((k % 16) == 15) Console.Write("\n");
             }
+            Console.WriteLine();
+        }
+
+        public static void Combinations(List<int[]> combinations )
+        {
+            foreach (int[] arrayInt in combinations)
+            {
+                for (int i = arrayInt.GetLowerBound(0); i <= arrayInt.GetUpperBound(0); i++)
+                {
+                    Console.Write("{0},", arrayInt.GetValue(i));
+                }
+                Console.WriteLine();
+            }
+        }
+
+        public static void Array(int[] a)
+        {
+            
+            for (int i = 0; i < a.Length; i++)
+            {
+                Console.Write("{0:X} ",a[i]);
+            }
+            Console.WriteLine();
         }
 
     }
