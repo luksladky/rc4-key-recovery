@@ -38,7 +38,6 @@ namespace BAKALARKA_RC4
             if (inSet == k)
             {
                 combinations.Add(prevSet);
-
             }
             else
             {

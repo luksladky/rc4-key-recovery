@@ -16,48 +16,75 @@ namespace BAKALARKA_RC4
         {
             Random rnd = new Random(1);
             //RC4.logKeyVerification = true;
-            //Attacks.logBuildKeyTableMinFreq = 3;
-            Attacks.logFrequencyList = false;
+            //BuildKeyTable.logBuildKeyTableMinFreq = 3;
+            BuildKeyTable.logFrequencyList = false;
+            BuildKeyTableImproved.logBuildKeyTableMinFreq = 0.00008;
 
-            const int TEST_ROUNDS = 1000;
+            const int TEST_ROUNDS = 10000000;
 
-            int rounds_counter = TEST_ROUNDS;
+            int roundsCounter = TEST_ROUNDS;
             byte keyLength = 5;
             int treshold = 2;
             int found = 0;
-            while (rounds_counter > 0)
+            
+            RC4 cipher = new RC4(new Key(rnd,keyLength));
+            Statistics statistics = new Statistics(cipher);
+
+            while (roundsCounter > 0)
             {
                 
                 //RC4.logAfterKSAPerm = true;
                 //Key key = new Key(new int[] {106,59,220,65,34});
                 Key key = new Key(rnd,keyLength);
+                statistics.testKey(key);
                 //Key key = new Key("aaaaaa");
-                RC4 cipher = new RC4(key);
+                
 
-                Attacks attack = new Attacks(cipher);
+                /*BuildKeyTableImproved buildKeyTable = new BuildKeyTableImproved(cipher);
 
                 //cipher.Encrypt("Plaintext");
                 
-                //Log.Key(key);
-                //Console.WriteLine("^ Actual key ^");
+                Log.Key(key);
+                Console.WriteLine("^ Actual key ^");
 
-                //attack.BuildKeyTable();
-                if (attack.GuessKeyFromFrequenc(treshold, 1000))
+                //buildKeyTable.BuildKeyTable();
+                if (buildKeyTable.GuessKeyFromFrequenc(treshold, 1000))
                 {
                     found++;
                 }
-                //attack.LinearEquationsTest();
+                //buildKeyTable.LinearEquationsTest();
 
-                rounds_counter--;
-                //Console.Read();
+                
+                //Console.Read();*/
+
+
+                roundsCounter--;
             }
 
-            Console.WriteLine("{0}/{1} found with treshold {2} and key lenght {3}",found, TEST_ROUNDS, treshold, keyLength);
+            statistics.calculateResults();
+
+            //Console.WriteLine("{0}/{1} found with treshold {2} and key lenght {3}",found, TEST_ROUNDS, treshold, keyLength);
 
 
             /* cipher.Encrypt("Plaintext");
             cipher.GetStateAfterKSA();*/
-
+            Console.Write("dataS = ");
+            Log.WeightsArray(statistics.resultsS);
+            Console.Write("dataSS = ");
+            Log.WeightsArray(statistics.resultsSS);
+            Console.Write("dataSSS = ");
+            Log.WeightsArray(statistics.resultsSSS);
+            Console.Write("dataSSSS = ");
+            Log.WeightsArray(statistics.resultsSSSS);
+            Console.Write("dataInvS = ");
+            Log.WeightsArray(statistics.resultsInvS);
+            Console.Write("dataInvSInvS = ");
+            Log.WeightsArray(statistics.resultsInvSInvS);
+            Console.Write("dataInvSInvSInvS = ");
+            Log.WeightsArray(statistics.resultsInvSInvSInvS);
+            Console.Write("dataInvSInvSInvSInvS = ");
+            Log.WeightsArray(statistics.resultsInvSInvSInvSInvS);
+            //Log.WeightsArray(statistics.resultsSinvS);
             Console.Read();
         }
     }

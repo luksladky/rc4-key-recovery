@@ -20,6 +20,7 @@ namespace BAKALARKA_RC4
         protected int rounds;
 
         public int[] savedS;
+        public int[] savedJs;
 
         public static bool logEncryption       = false;
         public static bool logAfterKSAPerm     = false;
@@ -36,6 +37,7 @@ namespace BAKALARKA_RC4
         {
             
             savedS = new int[N];
+            savedJs = new int[N];
             K = key;
         }
 
@@ -72,6 +74,7 @@ namespace BAKALARKA_RC4
             for (j = i = 0; i < N; i++)
             {
                 j = (j + S[i] + K[i]) % N;
+                savedJs[i] = j;
                 Swap(i, j);
             }
 
@@ -144,6 +147,13 @@ namespace BAKALARKA_RC4
             }
 
             return samePermutation;
+        }
+
+        public bool VerifyKeyHeuristic(Key key, int Steps, int HasToBeSame)
+        {
+            //TODO dodelat odhalovani spatneho klice podle odlisnosti prvnich N kroku
+
+            return false;
         }
 
  

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -61,6 +62,24 @@ namespace BAKALARKA_RC4
             Console.WriteLine();
         }
 
+        public static void WeightTable(double[,] weightsTable, double treshold)
+        {
+            Console.WriteLine("\n Frequency table");
+            for (int i = 0; i < weightsTable.GetLength(0); i++)
+            {
+                Console.WriteLine("\n Key byte {0}", i);
+                for (int j = 0; j < weightsTable.GetLength(1); j++)
+                {
+                    if (weightsTable[i, j] > treshold)
+                    {
+                        Console.WriteLine("Val: {0:X2}, Freq: {1}", j, weightsTable[i, j]);
+                    }
+
+                }
+            }
+            Console.WriteLine();
+        }
+
         public static void FrequencyListSortedWithTreshold(List<KeyByteFrequency>[] freqencyList) 
         {
             for (int i = 0; i < freqencyList.Length; i++)
@@ -104,6 +123,21 @@ namespace BAKALARKA_RC4
             {
                 Console.Write("{0:X} ",a[i]);
             }
+            Console.WriteLine();
+        }
+
+        public static void WeightsArray(double[] a)
+        {
+            NumberFormatInfo nfInfo = new NumberFormatInfo();
+            nfInfo.NumberDecimalSeparator = ".";
+
+            Console.Write('{');
+            for (int i = 0; i < a.Length; i++)
+            {
+                Console.Write(string.Format(a[i].ToString(nfInfo)));
+                if (i != a.Length -1) Console.Write(',');
+            }
+            Console.Write('}');
             Console.WriteLine();
         }
 
