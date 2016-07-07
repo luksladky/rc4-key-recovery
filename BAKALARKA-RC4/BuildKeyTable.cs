@@ -179,9 +179,7 @@ namespace BAKALARKA_RC4
         {
             if (index == limit)
             {
-                /*Log.Array(selection);*/
-
-
+                Log.Array(selection);
 
                 freqListSelections.Add(selection);
                 return;

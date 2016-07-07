@@ -9,7 +9,20 @@ namespace BAKALARKA_RC4
 {
     class Log
     {
+        public static void v(string s)
+        {
+            Console.WriteLine(s);
+        }
 
+        public static void v(int s)
+        {
+            Console.WriteLine(s);
+        }
+
+        public static void v(double s)
+        {
+            Console.WriteLine(s);
+        }
 
         public static void ByteArray(byte[] a)
         {
@@ -122,6 +135,16 @@ namespace BAKALARKA_RC4
             for (int i = 0; i < a.Length; i++)
             {
                 Console.Write("{0:X} ",a[i]);
+            }
+            Console.WriteLine();
+        }
+
+        public static void Combination(bool[] a)
+        {
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i])
+                    Console.Write("{0} ", i);
             }
             Console.WriteLine();
         }

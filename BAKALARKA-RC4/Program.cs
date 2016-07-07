@@ -10,82 +10,130 @@ namespace BAKALARKA_RC4
 {
     class Program
     {
-        
+        static void buildKeyAttact(Key key)
+        {
+            //Log.Key(key);
+            //BuildKeyTable buildKeyTable = new BuildKeyTable(cipher);
+            //buildKeyTable.GenerateKeyTable();
+
+            //BuildKeyTableImproved buildKeyTableImp = new BuildKeyTableImproved(cipher);
+            //buildKeyTableImp.GenerateKeyTable();
+            //Log.Key(key
+
+            //Log.Key(key);
+            //Console.WriteLine("^ Actual key ^");
+
+
+            /*if (buildKeyTable.GuessKeyFromFrequenc(treshold, 1000))
+            {
+                found++;
+            }*/
+            //buildKeyTable.LinearEquationsTest();
+        }
+
+        static void doStatistics(Statistics statistics, Key key)
+        {
+            //statistics.testKey(key);
+            //statistics.testKeyLinear(key);
+            //statistics.testKeyLinearWithDifference(key, Settings.keyLenght);
+            //statistics.testSumAllKeyBytes(key);
+            statistics.testReducedC(key);
+        }
+
+        static void doCombinedAttack(RC4 cipher, Key key)
+        {
+            CombinedAttack attack = new CombinedAttack(cipher,key.Length,key.Length);
+            attack.Attack(key.Length, 6, 8);
+        }
+
+        static double combinedAttackPartOfkeyObtained(RC4 cipher, Key key)
+        {
+            CombinedAttack attack = new CombinedAttack(cipher, key.Length, key.Length);
+            int[] guessedKey = attack.getFirstSuggestions(attack.guessKeyBasedOnJs());
+
+            int correct = 0;
+            for (int i = 0; i < key.Length; i++)
+            {
+                if (guessedKey[i] == key[i]) correct++;
+            }
+
+            return (double)correct / key.Length;
+        }
 
         static void Main(string[] args)
         {
-            Random rnd = new Random(1);
-            //RC4.logKeyVerification = true;
-            //BuildKeyTable.logBuildKeyTableMinFreq = 3;
-            BuildKeyTable.logFrequencyList = false;
-            BuildKeyTableImproved.logBuildKeyTableMinFreq = 0.00008;
+            Settings.setLogging();
+            Random rnd = new Random(5);
+            const int TEST_ROUNDS = Settings.rounds;
+            byte keyLength = Settings.keyLenght;
 
-            const int TEST_ROUNDS = 10000000;
-
-            int roundsCounter = TEST_ROUNDS;
-            byte keyLength = 5;
             int treshold = 2;
             int found = 0;
-            
-            RC4 cipher = new RC4(new Key(rnd,keyLength));
-            Statistics statistics = new Statistics(cipher);
 
+            Key firstKey = new Key(rnd, keyLength);
+            //Key firstKey = new Key(new int[] { 11, 21, 31, 41, 51 });
+
+            RC4 cipher = new RC4(firstKey);
+            Statistics statistics = new Statistics(cipher);
+            
+            int roundsCounter = TEST_ROUNDS;
+            double probabilitiesSummed = 0;
             while (roundsCounter > 0)
             {
-                
-                //RC4.logAfterKSAPerm = true;
-                //Key key = new Key(new int[] {106,59,220,65,34});
-                Key key = new Key(rnd,keyLength);
-                statistics.testKey(key);
-                //Key key = new Key("aaaaaa");
-                
-
-                /*BuildKeyTableImproved buildKeyTable = new BuildKeyTableImproved(cipher);
-
-                //cipher.Encrypt("Plaintext");
-                
-                Log.Key(key);
-                Console.WriteLine("^ Actual key ^");
-
-                //buildKeyTable.BuildKeyTable();
-                if (buildKeyTable.GuessKeyFromFrequenc(treshold, 1000))
+                if (roundsCounter % (TEST_ROUNDS / 10) == 0)
                 {
-                    found++;
+                    Console.WriteLine(roundsCounter / (TEST_ROUNDS / 10));
                 }
-                //buildKeyTable.LinearEquationsTest();
+               // Key key = new Key(new int[] { 0xA0, 0xB0, 0xC0, 0xD0, 0xE0 });
+                Key key = new Key(rnd,keyLength);
+                cipher.KSA(key);
+                //doStatistics(statistics, key);
+                //buildKeyAttact(key);
 
-                
-                //Console.Read();*/
-
-
+                doCombinedAttack(cipher,key);
+                //probabilitiesSummed += combinedAttackPartOfkeyObtained(cipher, key);
                 roundsCounter--;
             }
-
+            Console.WriteLine(probabilitiesSummed / TEST_ROUNDS);
             statistics.calculateResults();
 
             //Console.WriteLine("{0}/{1} found with treshold {2} and key lenght {3}",found, TEST_ROUNDS, treshold, keyLength);
 
 
             /* cipher.Encrypt("Plaintext");
-            cipher.GetStateAfterKSA();*/
+            cipher.GetStateAfterKSA/**/
+            Console.Write("dataSumOnPosition = ");
+            Log.WeightsArray(statistics.resultsSumOnPosition);/**/
+           
+            Console.Write("dataSLinear = ");
+            Log.WeightsArray(statistics.resultsSLinear);
+            /*Console.Write("dataInvSLinear = ");
+            Log.WeightsArray(statistics.resultsInvSLinear);/**/
+
+            /*Console.Write("dataAll = ");
+            Log.WeightsArray(statistics.resultsSomewhere/**/
             Console.Write("dataS = ");
-            Log.WeightsArray(statistics.resultsS);
+            Log.WeightsArray(statistics.resultsS);/*
             Console.Write("dataSS = ");
             Log.WeightsArray(statistics.resultsSS);
             Console.Write("dataSSS = ");
             Log.WeightsArray(statistics.resultsSSS);
             Console.Write("dataSSSS = ");
-            Log.WeightsArray(statistics.resultsSSSS);
+            Log.WeightsArray(statistics.resultsSSSS);/**/
             Console.Write("dataInvS = ");
             Log.WeightsArray(statistics.resultsInvS);
-            Console.Write("dataInvSInvS = ");
+            /*Console.Write("dataInvSInvS = ");
             Log.WeightsArray(statistics.resultsInvSInvS);
             Console.Write("dataInvSInvSInvS = ");
             Log.WeightsArray(statistics.resultsInvSInvSInvS);
             Console.Write("dataInvSInvSInvSInvS = ");
-            Log.WeightsArray(statistics.resultsInvSInvSInvSInvS);
+            Log.WeightsArray(statistics.resultsInvSInvSInvSInvS);*/
             //Log.WeightsArray(statistics.resultsSinvS);
-            Console.Read();
+            /*Console.Write("dataSomewhere = ");
+            Log.WeightsArray(statistics.resultsSomewhere);/**/
+
+
+        Console.Read();
         }
     }
 }

@@ -23,6 +23,12 @@ namespace BAKALARKA_RC4
             return (x % m + m) % m;
         }
 
+        protected int mod(int x)
+        {
+            int N = Constants.N;
+            return mod(x, N);
+        }
+
         protected void Swap(int i, int j)
         {
 

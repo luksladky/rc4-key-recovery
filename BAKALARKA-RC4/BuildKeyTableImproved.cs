@@ -16,6 +16,15 @@ namespace BAKALARKA_RC4
         public static bool logFrequencyList = false;
 
 
+        private int GetWeight(int i, double[] probabilities)
+        {
+            if (i == -1) return 3;
+            double tresholdHigh = 0.05;
+            double tresholdLow = 0.008;
+
+            return (probabilities[i] > tresholdHigh) ? 2 : (probabilities[i] < tresholdLow ? 0 : 1);
+        }
+
         public void GenerateKeyTable()
         {
             double[] jSPr = new double[257];
@@ -52,13 +61,22 @@ namespace BAKALARKA_RC4
             }
             for (int y = 0; y < N; y++)
             {
-                keyTable[y % l, mod(jarrS[y + 1] - jarrS[y] - y, N)] += jSPr[y+1] * jSPr[y];
-                keyTable[y % l, mod(jarrS[y + 1] - jarrInvS[y] - y, N)] += jSPr[y + 1] * jInvSPr[y];
-                keyTable[y % l, mod(jarrInvS[y + 1] - jarrS[y] - y, N)] += jInvSPr[y + 1] * jSPr[y];
-                keyTable[y % l, mod(jarrInvS[y + 1] - jarrInvS[y] - y, N)] += jInvSPr[y + 1] * jInvSPr[y];
-            }
+                int first = (y == 0) ? 0 : S[y - 1];
+                int second = S[y];
 
-            Console.WriteLine(keyTable[0,0]);
+                int firstInv = (y == 0) ? 0 : InvS[y - 1];
+                int secondInv = InvS[y];
+
+
+                //if (y == 0 | first >= y & second > y) 
+                keyTable[y % l, mod(jarrS[y + 1] - jarrS[y] - y, N)] += GetWeight(y, jSPr) + GetWeight(y-1, jSPr); //jSPr[y+1] * jSPr[y]*100;
+                //if (y == 0 | first >= y & secondInv <= y)
+                    keyTable[y % l, mod(jarrS[y + 1] - jarrInvS[y] - y, N)] += GetWeight(y, jSPr) +  GetWeight(y-1, jInvSPr); //jSPr[y + 1] * jInvSPr[y]*100;
+                //if (y == 0 | firstInv <= y & second >= y)
+                    keyTable[y % l, mod(jarrInvS[y + 1] - jarrS[y] - y, N)] += GetWeight(y, jInvSPr) + GetWeight(y-1, jSPr);// jInvSPr[y + 1] * jSPr[y]*100;
+                //if (y == 0 | firstInv <= y & secondInv <= y)
+                    keyTable[y % l, mod(jarrInvS[y + 1] - jarrInvS[y] - y, N)] += GetWeight(y, jInvSPr) + GetWeight(y-1, jInvSPr); //jInvSPr[y + 1] * jInvSPr[y]* 100;
+            }
 
             if (logBuildKeyTableMinFreq >= 0)
                 Log.WeightTable(keyTable, logBuildKeyTableMinFreq);
