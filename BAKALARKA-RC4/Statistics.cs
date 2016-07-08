@@ -37,6 +37,8 @@ namespace BAKALARKA_RC4
 
         private int[] somewhereCounts;
 
+        private int totalDepthCount;
+
        // private int[] SInvScounts;
         public double[] resultsS;
         public double[] resultsInvS;
@@ -57,6 +59,8 @@ namespace BAKALARKA_RC4
         public double[] resultsSomewhere;
 
         public double[] resultsSumOnPosition;
+
+        public double resutlsTotalDepth;
 
         private int iterations;
 
@@ -88,6 +92,8 @@ namespace BAKALARKA_RC4
 
             SLinearCounts = new int[N];
             InvSLinearCounts = new int[N];
+
+            totalDepthCount = 0;
 
             //SInvScounts = new int[N];
 
@@ -448,10 +454,12 @@ namespace BAKALARKA_RC4
 
             if (Ksum != s[0]) return;
             int[] C = new int[N];
+            int[] InvC = new int[N];
 
             for (int i = 0; i < N; i++)
             {
                 C[i] = mod(S[i] - i * (i + 1) / 2, N);
+                InvC[i] = mod(InvS[i] - i * (i + 1) / 2, N);
                 //C[i] = getSumOfKeyBytesFromTo(key, 0, i);
             }
 
@@ -472,7 +480,7 @@ namespace BAKALARKA_RC4
 
 
             int lambda = 0; //number of s to be substraced (minus lambda*s)
-            for (int i = 1; i < N; i++)
+            for (int i = 0; i < N; i++)
             {
                 if (Weights.sumS[i] >= Settings.prob_th)
                 {
@@ -484,7 +492,7 @@ namespace BAKALARKA_RC4
                             maximum[0, i % l] = value;
                     }
                         
-                }
+                }/**/
 
                 if (Weights.sumSS[i] >= Settings.prob_th)
                 {
@@ -493,16 +501,16 @@ namespace BAKALARKA_RC4
                     counter[0, i % l, value] += Weights.sumSS[i];
                     if (counter[0, i % l, maximum[0, i % l]] < counter[0, i % l, value])
                         maximum[0, i % l] = value;
-                }
+                }/**/
 
                 if (Weights.sumSS[i] >= Settings.prob_th)
                 {
-                    int value = mod(S[S[i]] - i * (i + 1) / 2 - lambda * s[0], N);
+                    int value = mod(S[S[S[i]]] - i * (i + 1) / 2 - lambda * s[0], N);
 
                     counter[0, i % l, value] += Weights.sumSSS[i];
                     if (counter[0, i % l, maximum[0, i % l]] < counter[0, i % l, value])
                         maximum[0, i % l] = value;
-                }
+                }/**/
 
                 if (i % l == l-1) lambda++;
             }
@@ -510,31 +518,41 @@ namespace BAKALARKA_RC4
             for (int diff = 2; diff <= l; diff++)
             {
                 double[] w = Weights.getWeightsSumDiff(diff);
+                double[] wInv = Weights.getWeightsSumDiffInv(diff);
                 for (int i1 = 0; i1 < N - diff; i1++)
                 {
-                    if (w[i1] < Settings.prob_th) break;
-
                     int i2 = i1 + diff;
-                    if (S[i2] >= i2 && S[i1] >= i1)
+                    int firstIndex = (i1 + 1) % l;
+                    int secondIndex = i2 % l;
+
+                    int value = mod(C[i2] - C[i1], N);
+                    int valueInv = mod(InvC[i2] - InvC[i1], N);
+                    //if (firstIndex <= secondIndex) continue;
+
+                    //normalize
+                    if (secondIndex < firstIndex)
                     {
-                        int value = mod(C[i2] - C[i1], N);
-                        int firstIndex = (i1 + 1) % l;
-                        int secondIndex = i2 % l;
+                        firstIndex = (i2 + 1) % l;
+                        secondIndex = i1 % l;
+                        value = mod(s[0] - value);
+                    }
 
-                        //if (firstIndex <= secondIndex) continue;
-
-                        //normalize
-                        if (secondIndex < firstIndex)
+                    if (w[i1] >= Settings.prob_th)
+                    {
+                        if (S[i2] >= i2 && S[i1] >= i1)
                         {
-                            firstIndex = (i2 + 1) % l;
-                            secondIndex = i1 % l;
-                            value = mod(s[0] - value);
-                        }        
+                            counter[firstIndex, secondIndex, value] += w[i1];
+                        }
 
-                        //int sum = getSumOfKeyBytesFromTo(key,i1+1,i2);
-                        counter[firstIndex, secondIndex,value ] += w[i1];
-                        if (counter[firstIndex, secondIndex, maximum[firstIndex, secondIndex]] < counter[firstIndex, secondIndex, value])
-                            maximum[firstIndex, secondIndex] = value;
+                    }
+
+                    if (wInv[i1] >= Settings.prob_th)
+                    {
+                        if (InvS[i2] <= i2 && InvS[i1] <= i1)
+                        {
+                            counter[firstIndex, secondIndex, valueInv] += w[i1];
+                        }
+
                     }
 
                 }
@@ -547,43 +565,55 @@ namespace BAKALARKA_RC4
                 for (int j = i; j < l; j++)
                 {
                     correct[i, j] = getSumOfKeyBytesFromTo(key, i, j);
-                    Console.WriteLine("K[{2}...{3}] --- {0} ma byt {1} ctr: {4}", maximum[i, j], correct[i, j],i,j,counter[i,j,maximum[i,j]]);
+                    //Console.WriteLine("K[{2}...{3}] --- {0} ma byt {1} ctr: {4}", maximum[i, j], correct[i, j],i,j,counter[i,j,maximum[i,j]]);
 
                 }
             }
 
+            int totalDepth = 0;
 
-
-            for (   int i = 0; i < l; i++)
+            //jak hluboko je spravny vysledek?
+            for (int i = 0; i < l; i++)
             {
+                for (int j = i; j< l; j++ )
+                {
+
                 bool found = false;
                 for (int nc = 0; nc < 256; nc++)
                 {
                     double max = -1;
                     int maxIndex = 0;
-                    for (int j = 0; j < N; j++)
+                    for (int k = 0; k < N; k++)
                     {
-                        if (counter[0,i,j] > max)
+                        if (counter[i, j, k] > max)
                         {
-                            maxIndex = j;
-                            max = counter[0,i, j];
+                            maxIndex = k;
+                            max = counter[i, j, k];
                         }
                     }
-                    counter[0,i, maxIndex] = -1;
-                    int Ksumi = getSumOfKeyBytesFromTo(key, 0, i);
+                    counter[i, j, maxIndex] = -1;
+                    int Ksumi = getSumOfKeyBytesFromTo(key, i, j);
                     if (Ksumi == maxIndex)
                     {
                         found = true;
-                        Log.v(nc);
+                        totalDepth += nc;
+                        //Console.WriteLine("K[{1}...{2}] --- {0}", nc, i, j);
                         continue;
                     }
 
                 }
                 if (!found)
-                    Log.v("...");
+                    {
+                        //Console.WriteLine("K[{0}...{1}] --- ...", i, j);
+                        totalDepth += 256;
+                    }
+                        
+                }
             }
 
-            Log.v("NEXT");
+            //Console.WriteLine("total {0}", totalDepth);
+            totalDepthCount += totalDepth;
+            //Log.v("NEXT");
     }
 
         public int J(int round, int nesting, bool inverse)
@@ -703,6 +733,11 @@ namespace BAKALARKA_RC4
             return guessedKey;
         }
 
+        public void testFixedJ(Key key, int m)
+        {
+
+        }
+
         public void calculateResults()
         {
             Console.WriteLine("{0}/{1}", CholdsCountAndSiLeqi, CholdsCount);
@@ -725,6 +760,8 @@ namespace BAKALARKA_RC4
             resultsInvSLinear = new double[N];
 
             resultsSumOnPosition = new double[N];
+
+            resutlsTotalDepth = ((float)totalDepthCount) / iterations;
 
             for (int i = 0; i < N; i++)
             {

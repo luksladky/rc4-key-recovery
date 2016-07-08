@@ -8,8 +8,8 @@ namespace BAKALARKA_RC4
 {
     class Settings
     {
-        public const int keyLenght = 10;
-        public const int rounds = 10000;
+        public const int keyLenght = 8;
+        public const int rounds = 100;
 
         public const int updateGroupLength = 4;
 

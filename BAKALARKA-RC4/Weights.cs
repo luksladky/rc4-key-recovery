@@ -521,7 +521,7 @@ namespace BAKALARKA_RC4
                 {
                     curr *= (N - r - 2) / N;
                 }
-                weights[i1] = curr*1.5; //(curr > 0.05) ? 2 : (curr < 0.008) ? 0 : 1;
+                weights[i1] = curr*Settings.prob_diff_boost; //(curr > 0.05) ? 2 : (curr < 0.008) ? 0 : 1;
             }
             return weights;
         }
@@ -540,7 +540,7 @@ namespace BAKALARKA_RC4
                 {
                     curr *= (N - r) / N * (i1 + 1) / N * (i2 + 1) / N * pow((N - 1) / N, 2 * Constants.N - i1 - i2 - 2);
                 }
-                weights[i1] = curr * 1.5; //(curr > 0.05) ? 2 : (curr < 0.008) ? 0 : 1;
+                weights[i1] = curr * Settings.prob_diff_boost; //(curr > 0.05) ? 2 : (curr < 0.008) ? 0 : 1;
             }
             return weights;
         }

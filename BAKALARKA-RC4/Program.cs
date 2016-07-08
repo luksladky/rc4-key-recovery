@@ -40,10 +40,10 @@ namespace BAKALARKA_RC4
             statistics.testReducedC(key);
         }
 
-        static void doCombinedAttack(RC4 cipher, Key key)
+        static bool doCombinedAttack(RC4 cipher, Key key)
         {
             CombinedAttack attack = new CombinedAttack(cipher,key.Length,key.Length);
-            attack.Attack(key.Length, 6, 8);
+            return attack.Attack(4,16);
         }
 
         static double combinedAttackPartOfkeyObtained(RC4 cipher, Key key)
@@ -78,6 +78,7 @@ namespace BAKALARKA_RC4
             
             int roundsCounter = TEST_ROUNDS;
             double probabilitiesSummed = 0;
+            int sucessCounter = 0;
             while (roundsCounter > 0)
             {
                 if (roundsCounter % (TEST_ROUNDS / 10) == 0)
@@ -90,16 +91,19 @@ namespace BAKALARKA_RC4
                 //doStatistics(statistics, key);
                 //buildKeyAttact(key);
 
-                doCombinedAttack(cipher,key);
+                if (doCombinedAttack(cipher,key))
+                    sucessCounter++;
                 //probabilitiesSummed += combinedAttackPartOfkeyObtained(cipher, key);
                 roundsCounter--;
             }
+            Console.WriteLine((double)sucessCounter / TEST_ROUNDS);
+
             Console.WriteLine(probabilitiesSummed / TEST_ROUNDS);
             statistics.calculateResults();
 
             //Console.WriteLine("{0}/{1} found with treshold {2} and key lenght {3}",found, TEST_ROUNDS, treshold, keyLength);
 
-
+            Console.WriteLine("total depth = {0}", statistics.resutlsTotalDepth);
             /* cipher.Encrypt("Plaintext");
             cipher.GetStateAfterKSA/**/
             Console.Write("dataSumOnPosition = ");

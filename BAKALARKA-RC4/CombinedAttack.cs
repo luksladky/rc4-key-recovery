@@ -36,18 +36,24 @@ namespace BAKALARKA_RC4
     {
         int keyLength;
         int m;
+        int nc;
         private double[] wDiffL;
         private double[] wDiff2L;
         private double[] wDiff3L;
-        int[] s;
+        int[] sCandidates;
+        int s;
         int[] keyJ;
+        double[,,] initialCounter;
         double[,] keyJCounter;
         double[,,] keySequenceCounter;
+        double[,,] currCounter;
         int[] C;
         int[] InvC;
         List<bool[]> allCombinations;
         int numberOfCombinations;
         double prob_th;
+
+        int[] recoveredKey;
 
         public CombinedAttack(RC4 cipher, int keyLength, int m) : base(cipher)
         {
@@ -63,8 +69,12 @@ namespace BAKALARKA_RC4
         }
 
         
-        public bool Attack(int keyLength, int m, int nc)
+        public bool Attack(int m, int nc)
         {
+            this.m = m;
+            this.nc = nc;
+            
+
             C = new int[N];
             InvC = new int[N];
 
@@ -77,88 +87,188 @@ namespace BAKALARKA_RC4
                 C[i] = mod(S[i] - i * (i + 1) / 2, N);
                 InvC[i] = mod(InvS[i] - i * (i + 1) / 2, N);
             }
-            keyJCounter = guessKeyBasedOnJs();
+
+            initializeCounters();
+
             keyJ = getFirstSuggestions(keyJCounter);
-            s = guessSumValue();
+
             
             for (int d = 0; d < Constants.sumAllKeyBytesDepth; d++)
             {
-                double[,] counters = reduceC(s[d]);
-                keySequenceCounter = getSequenceCounter(s[d]);
+                s = sCandidates[d];
+                //double[,] counters = reduceC(s[d]);
+                currCounter = updateCounterWithAllSum();
 
-                for (int c = 0; c < allCombinations.Count(); c++)
+                for (int c = 0; c < numberOfCombinations; c++)
                 {
                     bool[] fixedBytes = allCombinations.ElementAt(c);
 
-                    fixedBytes = new bool[10] { true, false, true, true, false, false, false, true, false, true };
+                    int[] currFixedKey = new int[l];
+                    Array.Copy(keyJ, currFixedKey, l);
 
+                    //fixedBytes = new bool[10] { true, true, false, true, false, false, false, true, false, true };
+                    //Log.Combination(fixedBytes);
 
-                    int updateGroups = keyLength / Settings.updateGroupLength;
-                    if (keyLength % Settings.updateGroupLength > 0) updateGroups++;
+                    //number of update groups
+                    int updateGroupsCount = keyLength / Settings.updateGroupLength;
+                    if (keyLength % Settings.updateGroupLength > 0) updateGroupsCount++;
 
-                    List<int[]>[] keySuggestions = new List<int[]>[updateGroups];
+                    List<int[]>[] keySuggestions = new List<int[]>[updateGroupsCount];
 
-                    for (int i = 0; i < updateGroups + 1; i++)
+                    for (int i = 0; i < updateGroupsCount; i++)
                     {
                         int startingPosition = i * Settings.updateGroupLength;
                         List<int[]> keyPart = new List<int[]> { };
 
-                        updateGroup(startingPosition,fixedBytes,startingPosition,new int[Settings.updateGroupLength]);
+                        updateGroup(startingPosition,startingPosition,fixedBytes, currFixedKey, keyPart);
 
                         keySuggestions[i] = keyPart;
+
+                        
+                        /*for (int j = 0; j < Math.Min(10,keyPart.Count); j++)
+                        {
+                            bool same = true;
+                            for (int k = 0; k < 4; k++)
+                            {
+                                if (cipher.K[startingPosition + k] != keyPart[j][k])
+                                    same = false;
+                            }
+                            if (same)
+                            {
+                                Log.v("ano");
+                            } else
+                            {
+                                Log.v("ne");
+                            }
+                        }/**/
                     }
+                    if (testKeys(0, updateGroupsCount, new int[keyLength], keySuggestions))
+                        return true;
                 }
             }
 
-
+            Log.v("false");
             return false;
         }
 
+        //public void updateMethod(double[,,] counter,bool[] fixedBytes)
 
-        public void updateGroup(int startingPosition, bool[] fixPositions, int curr_position, int[] curr_candidates)
+        
+        public bool testKeys(int currGroup, int groupsCount,int[] testedKey, List<int[]>[] keyGroups)
         {
-            fixPositions = new bool[10] { true, false, true, true, false, false, false, true, false, true };
-            int index = startingPosition;
-            int maxPos = Math.Min(startingPosition + Settings.updateGroupLength,keyLength);
-            while (fixPositions[index] & index < maxPos) index++;
-
-            if (index == maxPos) //Add key u posledni
+            int gl = Settings.updateGroupLength;
+            if (currGroup == groupsCount)
             {
-                return;
-            } else
+                if (testKey(testedKey))
+                {
+                    recoveredKey = testedKey;
+                    Log.Key(new Key(testedKey));
+                    return true;
+                } 
+                
+                return false;
+            }
+
+            bool found = false;
+            for (int i = 0; i < keyGroups[currGroup].Count; i++)
+            {
+                for (int j = 0; j < Math.Min(gl,keyLength-currGroup* gl); j++)
+                {
+                    testedKey[j+currGroup*gl] = keyGroups[currGroup][i][j];
+                }
+                if (testKeys(currGroup + 1, groupsCount, testedKey, keyGroups)) {
+                    found = true;
+                    break;
+                }
+            }
+
+            return found;
+
+            
+        }    
+
+        public bool testKey(int[] key)
+        {
+            bool same = true;
+            for (int i = 0; i < keyLength; i++)
+            {
+                if (cipher.K[i] != key[i]) same = false;
+            }
+
+            return same;
+
+
+
+        }
+
+
+        public void updateGroup(int startingPosition, int curr_position, bool[] fixPositions, int[] curr_candidates, List<int[]> suggestions)
+        {
+            
+            int index = curr_position;
+            int maxPos = Math.Min(startingPosition + Settings.updateGroupLength,keyLength);
+
+            while (index < maxPos)
+            {
+                if (fixPositions[index])
+                    index++;
+                else
+                    break;                
+            }
+            if (index >= maxPos) //Add key u posledni
+            {
+                int[] key = new int[Settings.updateGroupLength];
+                for (int i = 0; i < Settings.updateGroupLength; i++)
+                {
+                    if (i + startingPosition == maxPos) break;
+                    key[i] = curr_candidates[i + startingPosition];
+                }
+                suggestions.Add(key);
+            } else //update
             {
                 fixPositions[index] = true;
                 double[] counter = new double[N];
                 int startIndex;
                 int endIndex;
 
-                
-
-                findSumsUsedToUpdate(startingPosition, startingPosition + Settings.updateGroupLength - 1, index, fixPositions, out startIndex, out endIndex);
-
-                
+                findSumsUsedToUpdate(startingPosition, Math.Min(startingPosition + Settings.updateGroupLength - 1,keyLength-1), index, fixPositions, out startIndex, out endIndex); 
                 for (int k = startIndex; k <= index; k++)
                 {
-                    for (int l = index; l < endIndex; l++)
+                    for (int l = index; l <= endIndex; l++)
                     {
                         //Console.WriteLine("{0} - {1}", k, l);
                         for (int i = 0; i < N; i++)
                         {
-                            counter[i] = keyJCounter[curr_position, i];
+                            int suggestion = i;
+                            for (int other = k; other <= l; other++)
+                            {
+                                //sekvence uz na fixlych bytech, staci odecist ty, ktere nejsou ten hledany
+                                if (other != index)
+                                {
+                                    suggestion = mod(suggestion - curr_candidates[other],N);
+                                }
+                            }
+                            //if (k == l)
+                            counter[suggestion] += currCounter[k, l, i];
                         } 
                     }
                 }
-                    
 
-               
+                int[] candidates = selectCandidatesForByte(counter, nc);
 
+                for (int i = 0; i < nc; i++)
+                {
+                    curr_candidates[index] = candidates[i];
+                    updateGroup(startingPosition, index, fixPositions, curr_candidates, suggestions);
+                }
+            
                 fixPositions[index] = false; //for other instances on the stack
             }
 
             
         }
 
-        public double[,] reduceC(int s)
+        /*public double[,] reduceC(int s)
         {
             double[,] counter = new double[l,N];
             int lambda = 0; //number of s to be substraced (minus lambda*s)
@@ -168,11 +278,93 @@ namespace BAKALARKA_RC4
                 if (i % l == 0) lambda++;
             }
             return counter;
+        }*/
+
+        public void initializeCounters()
+        {
+            sCandidates = guessSumValue();
+            keyJCounter = guessKeyBasedOnJs();
+            initialCounter = new double[l, l, N];
+
+            for (int i = 0; i < l; i++)
+                for (int j = 0; j < N; j++)
+                    initialCounter[i, i, j] = keyJCounter[i, j];
+
+
+            for (int diff = 2; diff <= l; diff++)
+            {
+                double[] w = Weights.getWeightsSumDiff(diff);
+                double[] wInv = Weights.getWeightsSumDiffInv(diff);
+                for (int i1 = 0; i1 < N - diff; i1++)
+                {
+                    int i2 = i1 + diff;
+                    int firstIndex = (i1 + 1) % l;
+                    int secondIndex = i2 % l;
+
+                    int value = mod(C[i2] - C[i1], N);
+                    int valueInv = mod(InvC[i2] - InvC[i1], N);
+
+                    //normalize
+                    if (secondIndex < firstIndex)
+                    {
+                        firstIndex = (i2 + 1) % l;
+                        secondIndex = i1 % l;
+                        value = mod(sCandidates[0] - value);
+                    }
+
+                    if (w[i1] >= Settings.prob_th)
+                    {
+                        if (S[i2] >= i2 && S[i1] >= i1)
+                        {
+                            initialCounter[firstIndex, secondIndex, value] += w[i1];
+                        }
+
+                    }
+
+                    if (wInv[i1] >= Settings.prob_th)
+                    {
+                        if (InvS[i2] <= i2 && InvS[i1] <= i1)
+                        {
+                            initialCounter[firstIndex, secondIndex, valueInv] += w[i1];
+                        }
+
+                    }
+
+                }
+            }
         }
 
-        public double[,,] getSequenceCounter(int s)
+        public double[,,] updateCounterWithAllSum()
         {
-            return new double[l, l, N]; //TODO
+            double[,,] counter = Utils.copyArray3D(initialCounter, l, l, N);            
+
+            int lambda = 0; //number of s to be substraced (minus lambda*s)
+            for (int i = 0; i < N; i++)
+            {
+                if (Weights.sumS[i] >= Settings.prob_th)
+                    if (S[i] >= i)
+                    {
+                        int value = mod(C[i] - lambda * s, N);
+                        counter[0, i % l, value] += Weights.sumS[i];
+                    }
+
+                if (Weights.sumSS[i] >= Settings.prob_th)
+                {
+                    int value = mod(S[S[i]] - i * (i + 1) / 2 - lambda * s, N);
+
+                    counter[0, i % l, value] += Weights.sumSS[i];
+                }/**/
+
+                if (Weights.sumSS[i] >= Settings.prob_th)
+                {
+                    int value = mod(S[S[S[i]]] - i * (i + 1) / 2 - lambda * s, N);
+
+                    counter[0, i % l, value] += Weights.sumSSS[i];
+                }/**/
+
+                if (i % l == l - 1) lambda++;
+            }
+            return counter;
         }
 
         //tady je Log
@@ -197,8 +389,8 @@ namespace BAKALARKA_RC4
                 guessedKey[i] = maxWeightIndex;
 
             }
-            Log.Key(cipher.K);
-            Log.Key(new Key(guessedKey));
+            //Log.Key(cipher.K);
+            //Log.Key(new Key(guessedKey));
 
 
             return guessedKey;
@@ -449,7 +641,7 @@ namespace BAKALARKA_RC4
             }
             bytesWithWeights.Sort(new KeyByteWeightComparer());
 
-            for (int i = 0; i < nc; i++)
+            for (int i = 0; i < Math.Min(bytesWithWeights.Count, nc); i++)
             {
                 candidates[i] = bytesWithWeights[i].keyByte;
             }
@@ -475,11 +667,14 @@ namespace BAKALARKA_RC4
             startIndex = position;
             endIndex = position;
 
-            while (startIndex > from & fixedBytes[startIndex])
+            while (startIndex > from && fixedBytes[startIndex])
                 startIndex--;
             if (!fixedBytes[startIndex]) startIndex++;
 
-            while (endIndex < to & fixedBytes[endIndex])
+            if (to == 10)
+                startIndex += 0;
+
+            while (endIndex < to && fixedBytes[endIndex])
                 endIndex++;
             if (!fixedBytes[endIndex]) endIndex--;         
         }
@@ -495,7 +690,9 @@ namespace BAKALARKA_RC4
             {
                 //guessKeyOnPositions(selection, limit);
                 //Log.Combination(selection);
-                allCombinations.Insert(0, selection);
+                bool[] combination = new bool[keyLength];
+                Array.Copy(selection, combination, keyLength);
+                allCombinations.Add(combination);
                 return;
             }
             if (index == selection.Length)
